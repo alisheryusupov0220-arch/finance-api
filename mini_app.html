@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📱 Дневной отчёт</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #f5f5f5);
+            color: var(--tg-theme-text-color, #000);
+            padding: 16px;
+            padding-bottom: 80px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: var(--tg-theme-secondary-bg-color, #fff);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .section {
+            background: var(--tg-theme-secondary-bg-color, #fff);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--tg-theme-link-color, #2481cc);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--tg-theme-hint-color, #999);
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            background: var(--tg-theme-bg-color, #fff);
+            color: var(--tg-theme-text-color, #000);
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--tg-theme-button-color, #2481cc);
+        }
+
+        .payment-item, .expense-item, .income-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: var(--tg-theme-bg-color, #f9f9f9);
+            border-radius: 8px;
+        }
+
+        .payment-item label, .expense-item label, .income-item label {
+            flex: 1;
+            margin: 0;
+        }
+
+        .payment-item input, .expense-item input, .income-item input {
+            flex: 2;
+            min-width: 120px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        .btn:active {
+            opacity: 0.7;
+        }
+
+        .btn-primary {
+            background: var(--tg-theme-button-color, #2481cc);
+            color: var(--tg-theme-button-text-color, #fff);
+            width: 100%;
+        }
+
+        .btn-add {
+            background: #4CAF50;
+            color: white;
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .btn-remove {
+            background: #f44336;
+            color: white;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .info-text {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color, #999);
+            margin-top: 8px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-size: 18px;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .dynamic-list {
+            margin-top: 12px;
+        }
+
+        .list-item {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: flex-start;
+        }
+
+        .list-item input,
+        .list-item select {
+            flex: 1;
+        }
+
+        #totalSales {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--tg-theme-button-color, #2481cc);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 Дневной отчёт</h1>
+            <p id="dateDisplay"></p>
+        </div>
+
+        <div id="message"></div>
+
+        <!-- ОСНОВНАЯ ИНФОРМАЦИЯ -->
+        <div class="section">
+            <div class="section-title">📋 Основная информация</div>
+            
+            <div class="form-group">
+                <label>Дата отчёта</label>
+                <input type="date" id="reportDate" required>
+            </div>
+
+            <div class="form-group">
+                <label>Точка продаж</label>
+                <select id="location" required>
+                    <option value="">Загрузка...</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Общая сумма продаж (сум)</label>
+                <input type="number" id="totalSales" placeholder="0" required>
+            </div>
+        </div>
+
+        <!-- МЕТОДЫ ОПЛАТЫ -->
+        <div class="section">
+            <div class="section-title">💳 Методы оплаты</div>
+            <div id="paymentMethods"></div>
+        </div>
+
+        <!-- РАСХОДЫ -->
+        <div class="section">
+            <div class="section-title">💸 Расходы</div>
+            <div id="expenses"></div>
+            <button class="btn btn-add" onclick="addExpense()">➕ Добавить расход</button>
+        </div>
+
+        <!-- ПРИХОДЫ -->
+        <div class="section">
+            <div class="section-title">💰 Приходы (не от продаж)</div>
+            <div id="incomes"></div>
+            <button class="btn btn-add" onclick="addIncome()">➕ Добавить приход</button>
+        </div>
+
+        <!-- НАЛИЧНЫЕ -->
+        <div class="section">
+            <div class="section-title">💵 Наличные (факт)</div>
+            <div class="form-group">
+                <label>Сумма наличных (посчитали купюры)</label>
+                <input type="number" id="cashActual" placeholder="0">
+                <p class="info-text">Введите сумму которую посчитали в кассе</p>
+            </div>
+        </div>
+
+        <!-- КНОПКА СОХРАНЕНИЯ -->
+        <button class="btn btn-primary" onclick="saveReport()">💾 СОХРАНИТЬ ОТЧЁТ</button>
+    </div>
+
+    <script>
+        // Инициализация Telegram Web App (с проверкой)
+        const tg = window.Telegram?.WebApp || {
+            expand: () => {},
+            ready: () => {},
+            showAlert: (msg, callback) => { alert(msg); callback?.(); },
+            close: () => { console.log('Close'); },
+            initDataUnsafe: {}
+        };
+        tg.expand();
+        tg.ready();
+
+        // API URL (поменяй на свой сервер!)
+        const API_URL = 'http://localhost:8000';
+
+        // Данные
+        let locations = [];
+        let paymentMethods = [];
+        let expenseCategories = [];
+        let incomeCategories = [];
+        let expenseCount = 0;
+        let incomeCount = 0;
+
+        // Установка текущей даты
+        document.getElementById('reportDate').valueAsDate = new Date();
+        document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('ru-RU');
+
+        // Загрузка данных
+        async function loadData() {
+            try {
+                // Загружаем все справочники
+                const [locsRes, methodsRes, expCatsRes, incCatsRes] = await Promise.all([
+                    fetch(`${API_URL}/api/locations`),
+                    fetch(`${API_URL}/api/payment_methods`),
+                    fetch(`${API_URL}/api/expense_categories`),
+                    fetch(`${API_URL}/api/income_categories`)
+                ]);
+
+                locations = (await locsRes.json()).data;
+                paymentMethods = (await methodsRes.json()).data;
+                expenseCategories = (await expCatsRes.json()).data;
+                incomeCategories = (await incCatsRes.json()).data;
+
+                // Заполняем точки
+                const locSelect = document.getElementById('location');
+                locSelect.innerHTML = '<option value="">Выберите точку</option>';
+                locations.forEach(loc => {
+                    locSelect.innerHTML += `<option value="${loc.id}">${loc.name}</option>`;
+                });
+
+                // Заполняем методы оплаты (только видимые, по порядку)
+                const methodsDiv = document.getElementById('paymentMethods');
+                paymentMethods
+                    .filter(m => m.is_visible && m.is_active)
+                    .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+                    .forEach(method => {
+                        methodsDiv.innerHTML += `
+                            <div class="payment-item">
+                                <label>${method.name}</label>
+                                <input type="number" id="payment_${method.id}" placeholder="0" value="0">
+                            </div>
+                        `;
+                    });
+
+            } catch (error) {
+                showMessage('Ошибка загрузки данных: ' + error.message, 'error');
+            }
+        }
+
+        // Добавить расход
+        function addExpense() {
+            expenseCount++;
+            const expensesDiv = document.getElementById('expenses');
+            const div = document.createElement('div');
+            div.className = 'list-item';
+            div.id = `expense_${expenseCount}`;
+            
+            let options = '<option value="">Без категории</option>';
+            expenseCategories.forEach(cat => {
+                options += `<option value="${cat.id}">${cat.name}</option>`;
+            });
+
+            div.innerHTML = `
+                <select id="expense_cat_${expenseCount}">${options}</select>
+                <input type="number" id="expense_amt_${expenseCount}" placeholder="Сумма">
+                <input type="text" id="expense_desc_${expenseCount}" placeholder="Описание">
+                <button class="btn btn-remove" onclick="removeExpense(${expenseCount})">✖</button>
+            `;
+            expensesDiv.appendChild(div);
+        }
+
+        // Удалить расход
+        function removeExpense(id) {
+            document.getElementById(`expense_${id}`).remove();
+        }
+
+        // Добавить приход
+        function addIncome() {
+            incomeCount++;
+            const incomesDiv = document.getElementById('incomes');
+            const div = document.createElement('div');
+            div.className = 'list-item';
+            div.id = `income_${incomeCount}`;
+            
+            let options = '<option value="">Без категории</option>';
+            incomeCategories.forEach(cat => {
+                options += `<option value="${cat.id}">${cat.name}</option>`;
+            });
+
+            div.innerHTML = `
+                <select id="income_cat_${incomeCount}">${options}</select>
+                <input type="number" id="income_amt_${incomeCount}" placeholder="Сумма">
+                <input type="text" id="income_desc_${incomeCount}" placeholder="Описание">
+                <button class="btn btn-remove" onclick="removeIncome(${incomeCount})">✖</button>
+            `;
+            incomesDiv.appendChild(div);
+        }
+
+        // Удалить приход
+        function removeIncome(id) {
+            document.getElementById(`income_${id}`).remove();
+        }
+
+        // Показать сообщение
+        function showMessage(text, type) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.className = type;
+            msgDiv.textContent = text;
+            setTimeout(() => msgDiv.textContent = '', 5000);
+        }
+
+        // Сохранить отчёт
+        async function saveReport() {
+            try {
+                // Собираем данные
+                const reportDate = document.getElementById('reportDate').value;
+                const locationId = parseInt(document.getElementById('location').value);
+                const totalSales = parseFloat(document.getElementById('totalSales').value);
+                const cashActual = parseFloat(document.getElementById('cashActual').value) || 0;
+
+                // Валидация
+                if (!reportDate || !locationId || !totalSales) {
+                    showMessage('Заполните все обязательные поля!', 'error');
+                    return;
+                }
+
+                // Собираем платежи
+                const payments = [];
+                paymentMethods.forEach(method => {
+                    const amount = parseFloat(document.getElementById(`payment_${method.id}`).value) || 0;
+                    if (amount > 0) {
+                        payments.push({
+                            method_id: method.id,
+                            amount: amount
+                        });
+                    }
+                });
+
+                // Собираем расходы
+                const expenses = [];
+                for (let i = 1; i <= expenseCount; i++) {
+                    const amtEl = document.getElementById(`expense_amt_${i}`);
+                    if (amtEl) {
+                        const amount = parseFloat(amtEl.value) || 0;
+                        if (amount > 0) {
+                            const catId = document.getElementById(`expense_cat_${i}`).value;
+                            const desc = document.getElementById(`expense_desc_${i}`).value;
+                            expenses.push({
+                                category_id: catId ? parseInt(catId) : null,
+                                amount: amount,
+                                description: desc || 'Расход'
+                            });
+                        }
+                    }
+                }
+
+                // Собираем приходы
+                const incomes = [];
+                for (let i = 1; i <= incomeCount; i++) {
+                    const amtEl = document.getElementById(`income_amt_${i}`);
+                    if (amtEl) {
+                        const amount = parseFloat(amtEl.value) || 0;
+                        if (amount > 0) {
+                            const catId = document.getElementById(`income_cat_${i}`).value;
+                            const desc = document.getElementById(`income_desc_${i}`).value;
+                            incomes.push({
+                                category_id: catId ? parseInt(catId) : null,
+                                amount: amount,
+                                description: desc || 'Приход'
+                            });
+                        }
+                    }
+                }
+
+                // Формируем запрос
+                const data = {
+                    report_date: reportDate,
+                    location_id: locationId,
+                    total_sales: totalSales,
+                    payments: payments,
+                    expenses: expenses,
+                    incomes: incomes,
+                    cash_actual: cashActual,
+                    created_by: tg.initDataUnsafe?.user?.username || 'telegram_user'
+                };
+
+                console.log('Отправляем:', data);
+
+                // Отправляем на сервер
+                const response = await fetch(`${API_URL}/api/create_report`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('✅ Отчёт успешно сохранён!', 'success');
+                    tg.showAlert('Отчёт сохранён!', () => {
+                        tg.close();
+                    });
+                } else {
+                    showMessage('❌ ' + result.detail, 'error');
+                }
+
+            } catch (error) {
+                showMessage('Ошибка: ' + error.message, 'error');
+                console.error(error);
+            }
+        }
+
+        // Загружаем данные при старте
+        loadData();
+    </script>
+</body>
+</html>
