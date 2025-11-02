@@ -30,9 +30,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Раздача статических файлов (если есть папка static)
-if os.path.exists("static"):
-    app.mount("/static", StaticFiles(directory="static"), name="static")
+# Раздача статических файлов
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Путь к БД (будем создавать подключение для каждого запроса)
 DB_PATH = 'finance_v5.db'
