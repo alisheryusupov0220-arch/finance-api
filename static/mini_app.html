@@ -476,22 +476,45 @@
             const totalSalesInput = document.getElementById('totalSalesInput');
             const totalSales = parseInt(unformatNumber(totalSalesInput.value)) || 0;
 
-            // Разница
-            const difference = cashActual - (totalSales - cardTotal);
+            // РАСХОДЫ
+            let totalExpenses = 0;
+            for (let i = 1; i <= expenseCount; i++) {
+                const amtEl = document.getElementById(`expense_amt_${i}`);
+                if (amtEl) {
+                    const amount = parseInt(unformatNumber(amtEl.value)) || 0;
+                    totalExpenses += amount;
+                }
+            }
+
+            // ПРИХОДЫ
+            let totalIncomes = 0;
+            for (let i = 1; i <= incomeCount; i++) {
+                const amtEl = document.getElementById(`income_amt_${i}`);
+                if (amtEl) {
+                    const amount = parseInt(unformatNumber(amtEl.value)) || 0;
+                    totalIncomes += amount;
+                }
+            }
+
+            // ПЛАН наличных = Продажи - Безнал - Расходы + Приходы
+            const cashFromSales = totalSales - cardTotal;
+            const cashExpected = cashFromSales - totalExpenses + totalIncomes;
+
+            // РАЗНИЦА = Факт - План
+            const difference = cashActual - cashExpected;
 
             // Обновить блок итогов
-            document.getElementById('cashTotal').textContent = formatNumber(cashActual);
+            document.getElementById('cashTotal').textContent = formatNumber(cashActual) + ' (факт)';
             document.getElementById('cardTotal').textContent = formatNumber(cardTotal);
             document.getElementById('totalSales').textContent = formatNumber(totalSales);
             
             const diffElement = document.getElementById('difference');
-            diffElement.textContent = formatNumber(Math.abs(difference));
             if (difference > 0) {
                 diffElement.className = 'summary-value difference-positive';
                 diffElement.textContent = '+' + formatNumber(difference);
             } else if (difference < 0) {
                 diffElement.className = 'summary-value difference-negative';
-                diffElement.textContent = '-' + formatNumber(Math.abs(difference));
+                diffElement.textContent = formatNumber(difference);
             } else {
                 diffElement.className = 'summary-value';
                 diffElement.textContent = '0';
@@ -568,7 +591,7 @@
 
             div.innerHTML = `
                 <select id="expense_cat_${expenseCount}">${options}</select>
-                <input type="text" id="expense_amt_${expenseCount}" placeholder="Сумма" oninput="validateNumberInput(event)">
+                <input type="text" id="expense_amt_${expenseCount}" placeholder="Сумма" oninput="validateNumberInput(event); calculateTotals();">
                 <input type="text" id="expense_desc_${expenseCount}" placeholder="Описание">
                 <button class="btn btn-remove" onclick="removeExpense(${expenseCount})">✖</button>
             `;
@@ -577,6 +600,7 @@
 
         function removeExpense(id) {
             document.getElementById(`expense_${id}`).remove();
+            calculateTotals();
         }
 
         // Добавить приход
@@ -594,7 +618,7 @@
 
             div.innerHTML = `
                 <select id="income_cat_${incomeCount}">${options}</select>
-                <input type="text" id="income_amt_${incomeCount}" placeholder="Сумма" oninput="validateNumberInput(event)">
+                <input type="text" id="income_amt_${incomeCount}" placeholder="Сумма" oninput="validateNumberInput(event); calculateTotals();">
                 <input type="text" id="income_desc_${incomeCount}" placeholder="Описание">
                 <button class="btn btn-remove" onclick="removeIncome(${incomeCount})">✖</button>
             `;
@@ -603,6 +627,7 @@
 
         function removeIncome(id) {
             document.getElementById(`income_${id}`).remove();
+            calculateTotals();
         }
 
         // Показать сообщение
@@ -616,12 +641,19 @@
         // Сохранить отчёт
         async function saveReport() {
             try {
+                // Блокируем кнопку
+                const btn = document.querySelector('.btn-primary');
+                btn.disabled = true;
+                btn.textContent = '⏳ Сохранение...';
+
                 const reportDate = document.getElementById('reportDate').value;
                 const locationId = parseInt(document.getElementById('location').value);
                 const totalSales = parseInt(unformatNumber(document.getElementById('totalSalesInput').value)) || 0;
 
                 if (!reportDate || !locationId || !totalSales) {
                     showMessage('Заполните все обязательные поля!', 'error');
+                    btn.disabled = false;
+                    btn.textContent = '💾 СОХРАНИТЬ ОТЧЁТ';
                     return;
                 }
 
@@ -712,16 +744,24 @@
 
                 if (response.ok) {
                     showMessage('✅ Отчёт успешно сохранён!', 'success');
-                    tg.showAlert('Отчёт сохранён!', () => {
-                        tg.close();
-                    });
+                    alert('✅ Отчёт сохранён!\n\nID отчёта: ' + result.report_id);
+                    
+                    // Закрываем или обновляем
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
                 } else {
                     showMessage('❌ ' + result.detail, 'error');
+                    btn.disabled = false;
+                    btn.textContent = '💾 СОХРАНИТЬ ОТЧЁТ';
                 }
 
             } catch (error) {
                 showMessage('Ошибка: ' + error.message, 'error');
                 console.error(error);
+                const btn = document.querySelector('.btn-primary');
+                btn.disabled = false;
+                btn.textContent = '💾 СОХРАНИТЬ ОТЧЁТ';
             }
         }
 
